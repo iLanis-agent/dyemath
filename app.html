@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dye math - the app</title>
+<style>
+  :root { --ink:#2e2a20; --bg:#f6f4ee; --card:#fff; --accent:#6b5a1e; --accent2:#86732e; --soft:#ece5c8; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink); padding:18px; }
+  .wrap { max-width:1180px; margin:0 auto; }
+  .lede { text-align:center; color:#5f5944; margin:6px 0 16px; font-size:15px; max-width:760px; margin-left:auto; margin-right:auto; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; }
+  .card { background:var(--card); border-radius:14px; padding:22px; box-shadow:0 1px 3px rgba(70,60,20,.08); }
+  h2 { font-size:19px; margin-bottom:14px; }
+  label { display:block; font-size:13px; color:#6e6850; margin:10px 0 4px; }
+  input { width:100%; padding:9px 10px; border:1px solid #d3cbae; border-radius:8px; font-size:15px; background:#fdfcf8; }
+  button { width:100%; margin-top:16px; padding:12px; border:0; border-radius:9px; background:var(--accent); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+  button:hover { background:var(--accent2); }
+  .big { font-size:34px; font-weight:700; margin:14px 0 2px; }
+  .cap { font-size:13px; color:#6e6850; }
+  .pill { display:inline-block; margin-top:10px; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:600; }
+  .pill.warm { background:var(--soft); color:var(--accent); }
+  table { width:100%; margin-top:12px; border-collapse:collapse; font-size:14px; }
+  td { padding:7px 0; border-bottom:1px solid #e2dcc4; }
+  td:last-child { text-align:right; font-weight:600; }
+  .err { color:#a3341f; font-size:14px; margin-top:10px; }
+  .foot { margin-top:20px; font-size:12.5px; color:#7c765e; line-height:1.6; }
+  .foot a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="lede">Every natural dye recipe is a percentage of one number: the dry weight of your goods. Weigh the fiber once, and the whole recipe is multiplication.</p>
+  <div class="cards">
+    <div class="card">
+      <h2>Mordant the fiber</h2>
+      <label for="m_g">Dry goods weight (g)</label>
+      <input id="m_g" type="number" value="500" min="0" step="10">
+      <label for="m_p">Mordant dose (% of weight of goods - 15% alum is a labeled norm)</label>
+      <input id="m_p" type="number" value="15" min="0" step="0.5">
+      <label for="m_r">Water ratio (liters per kg of goods)</label>
+      <input id="m_r" type="number" value="20" min="0" step="1">
+      <button id="m_go">Weigh the mordant</button>
+      <div class="big" id="m_out">-</div>
+      <div class="cap">mordant (g)</div>
+      <div class="pill warm" id="m_verdict" style="display:none"></div>
+      <table id="m_rows" style="display:none">
+        <tr><td>water for the bath</td><td id="m_water">-</td></tr>
+      </table>
+      <div class="err" id="m_err"></div>
+    </div>
+    <div class="card">
+      <h2>Weigh the dye</h2>
+      <label for="d_g">Dry goods weight (g)</label>
+      <input id="d_g" type="number" value="500" min="0" step="10">
+      <label for="d_p">Dye matter (% of weight of goods)</label>
+      <input id="d_p" type="number" value="20" min="0" step="1">
+      <button id="d_go">Weigh the dye</button>
+      <div class="big" id="d_out">-</div>
+      <div class="cap">dye matter (g)</div>
+      <div class="pill warm" id="d_verdict" style="display:none"></div>
+      <div class="err" id="d_err"></div>
+    </div>
+    <div class="card">
+      <h2>Fill the pot</h2>
+      <label for="b_g">Dry goods weight (g)</label>
+      <input id="b_g" type="number" value="500" min="0" step="10">
+      <label for="b_r">Bath ratio (liters per kg of goods)</label>
+      <input id="b_r" type="number" value="20" min="0" step="1">
+      <button id="b_go">Fill the bath</button>
+      <div class="big" id="b_out">-</div>
+      <div class="cap">water (liters)</div>
+      <div class="pill warm" id="b_verdict" style="display:none"></div>
+      <div class="err" id="b_err"></div>
+    </div>
+  </div>
+  <p class="foot">Exact percentages of the dry goods weight (WOF). The dose bands, bath ratios and strength labels are flagged craft norms - dye strength varies by plant, season and water. This measures nothing about your materials and gives no chemical-safety guidance. <a href="index.html">Why this exists</a></p>
+</div>
+<script src="engine.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const g = id => parseFloat($(id).value);
+function show(id, txt) { const e = $(id); e.textContent = txt; e.style.display = txt ? 'inline-block' : 'none'; }
+document.getElementById('m_go').onclick = () => {
+  $('m_err').textContent = '';
+  try {
+    const r = Dyemath.mordant(g('m_g'), g('m_p'), g('m_r'));
+    $('m_out').textContent = r.mordantG + ' g';
+    show('m_verdict', r.verdict);
+    $('m_water').textContent = r.waterL + ' L';
+    $('m_rows').style.display = 'table';
+  } catch (e) { $('m_err').textContent = e.message; }
+};
+document.getElementById('d_go').onclick = () => {
+  $('d_err').textContent = '';
+  try {
+    const r = Dyemath.dyematter(g('d_g'), g('d_p'));
+    $('d_out').textContent = r.dyeG + ' g';
+    show('d_verdict', r.verdict);
+  } catch (e) { $('d_err').textContent = e.message; }
+};
+document.getElementById('b_go').onclick = () => {
+  $('b_err').textContent = '';
+  try {
+    const r = Dyemath.bath(g('b_g'), g('b_r'));
+    $('b_out').textContent = r.waterL + ' L';
+    show('b_verdict', r.verdict);
+  } catch (e) { $('b_err').textContent = e.message; }
+};
+</script>
+</body>
+</html>
